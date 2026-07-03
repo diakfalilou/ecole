@@ -281,7 +281,9 @@
 
                                 </td>
                                 <td>
-                                    <a target="_blanck" href="{{'http://127.0.0.1:8000/'.$ecole->v_slugecole }}"> {{'http://127.0.0.1:8000/'.$ecole->v_slugecole }} </a>
+                                    <a target="_blank" href="{{ url($ecole->v_slugecole) }}">
+                                    {{ url($ecole->v_slugecole) }}
+                                    </a>
                                 </td>
                                 <!-- ACTION -->
                                 <td>
