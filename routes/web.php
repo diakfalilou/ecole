@@ -34,6 +34,7 @@ use App\Http\Controllers\ecole\CertificatScolariteController;
 use App\Http\Controllers\ecole\UpdateInfoInscriptionController;
 use App\Http\Controllers\ecole\SettingClassesController;
 use App\Http\Controllers\ecole\AttestationInscriptionReinscriptionController;
+use App\Http\Controllers\ecole\BulletinController;
 use App\Http\Controllers\ecole\SettingTrancheCntroller;
 use App\Http\Controllers\ecole\PaiementScolariteController;
 use App\Http\Controllers\ecole\ExonorationController;
@@ -44,11 +45,12 @@ use App\Http\Controllers\ecole\CompteBancaireController;
 use App\Http\Controllers\ecole\PressanceController;
 use App\Http\Controllers\ecole\DepenseController;
 use App\Http\Controllers\ecole\MatiereController;
-
-
-
-
+use App\Http\Controllers\ecole\ProfesseurController;
+use App\Http\Controllers\ecole\ClasseMatiereController;
+use App\Http\Controllers\ecole\EmploiDuTempsController;
+use App\Http\Controllers\ecole\NoteController;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\ecole\FicheNoteController;
 
 
 
@@ -190,6 +192,7 @@ Route::get('/{slug}/get-montant-tranche', [PaiementScolariteController::class, '
 Route::post('/{slug}/enregistrer-paiement', [PaiementScolariteController::class, 'enregistrerPaiement'])->middleware('auth');
 Route::get('/{slug}/get-statut-paiement/{eleveId}', [PaiementScolariteController::class, 'getStatutPaiement'])->middleware('auth');
 Route::get('/{slug}/get-historique-paiement/{eleveId}', [PaiementScolariteController::class, 'getHistoriquePaiement'])->middleware('auth');
+Route::get('/{slug}/imprimer-recu/{numero_recu}', [PaiementScolariteController::class, 'imprimerRecu']);
 
 
 Route::get('/{slug}/exoneration', [ExonorationController::class, 'exoneration'])->middleware('auth')->name('exoneration');
@@ -233,12 +236,53 @@ Route::middleware('auth')->group(function () {
     Route::post('/{slug}/depense/store', [DepenseController::class, 'store'])->name('depense.store');
     Route::post('/{slug}/depense/{id}/annuler', [DepenseController::class, 'annuler'])->name('depense.annuler');
 
+    Route::get('/{slug}/professeur', [ProfesseurController::class, 'professeur'])->name('professeur');
+    Route::get('/{slug}/professeur/list', [ProfesseurController::class, 'getProfesseurs'])->name('professeur.list');
+    Route::get('/{slug}/professeur/{id}/detail', [ProfesseurController::class, 'detail'])->name('professeur.detail');
+    Route::post('/{slug}/professeur/store', [ProfesseurController::class, 'store'])->name('professeur.store');
+    Route::post('/{slug}/professeur/{id}/update', [ProfesseurController::class, 'update'])->name('professeur.update');
+    Route::post('/{slug}/professeur/{id}/suspendre', [ProfesseurController::class, 'suspendre'])->name('professeur.suspendre');
+
 
     Route::get('/{slug}/matiere', [MatiereController::class, 'matiere'])->name('matiere');
+    Route::get('/{slug}/matiere/list', [MatiereController::class, 'getMatieres'])->name('matiere.list');
+    Route::get('/{slug}/matiere/{id}/detail', [MatiereController::class, 'detail'])->name('matiere.detail');
     Route::post('/{slug}/matiere/store', [MatiereController::class, 'store'])->name('matiere.store');
+    Route::post('/{slug}/matiere/{id}/update', [MatiereController::class, 'update'])->name('matiere.update');
+    Route::post('/{slug}/matiere/{id}/suspendre', [MatiereController::class, 'suspendre'])->name('matiere.suspendre');
+
+    Route::get('/{slug}/classe-matiere', [ClasseMatiereController::class, 'classeMatiere'])->name('classe-matiere');
+    Route::get('/{slug}/classe-matiere/classes', [ClasseMatiereController::class, 'getClasses'])->name('classe-matiere.classes');
+    Route::get('/{slug}/classe-matiere/matieres', [ClasseMatiereController::class, 'getMatieresPourClasse'])->name('classe-matiere.matieres');
+    Route::post('/{slug}/classe-matiere/save', [ClasseMatiereController::class, 'enregistrerAffectations'])->name('classe-matiere.save');
+    Route::get('/{slug}/classe-matiere/recapitulatif', [ClasseMatiereController::class, 'recapitulatif'])->name('classe-matiere.recapitulatif');
+
+    Route::get('/{slug}/emploidutemps', [EmploiDuTempsController::class, 'index'])->name('emploidutemps');
+    Route::get('/{slug}/emploi-du-temps/annees', [EmploiDuTempsController::class, 'getAnneesScolaires'])->name('emploidutemps.annees');
+    Route::get('/{slug}/emploi-du-temps/professeurs', [EmploiDuTempsController::class, 'getProfesseurs'])->name('emploidutemps.professeurs');
+    Route::get('/{slug}/emploi-du-temps/niveaux', [EmploiDuTempsController::class, 'getNiveaux'])->name('emploidutemps.niveaux');
+    Route::get('/{slug}/emploi-du-temps/classes/{niveauId}', [EmploiDuTempsController::class, 'getClassesParNiveau'])->name('emploidutemps.classes');
+    Route::get('/{slug}/emploi-du-temps/matieres/{classeId}', [EmploiDuTempsController::class, 'getMatieresParClasse'])->name('emploidutemps.matieres');
+    Route::get('/{slug}/emploi-du-temps/grille', [EmploiDuTempsController::class, 'getGrille'])->name('emploidutemps.grille');
+    Route::post('/{slug}/emploi-du-temps/toggle', [EmploiDuTempsController::class, 'toggleCase'])->name('emploidutemps.toggle');
+    Route::get('/{slug}/emploi-du-temps/pdf', [EmploiDuTempsController::class, 'imprimerPdf'])->name('emploidutemps.pdf');
 
 
 
+
+    Route::get('/{slug}/notes', [NoteController::class, 'index'])->name('notes');
+    // AJAX
+    Route::get('/{slug}/notes/classes/{niveauId}', [NoteController::class, 'getClassesByNiveau'])->name('notes.classes');
+    Route::get('/{slug}/notes/matieres/{classeId}', [NoteController::class, 'getMatieresByClasse'])->name('notes.matieres');
+    Route::get('/{slug}/notes/eleves/{classeId}', [NoteController::class, 'getElevesByClasse'])->name('notes.eleves');
+    Route::get('/{slug}/notes/data', [NoteController::class, 'getNotes'])->name('notes.data');
+    Route::post('/{slug}/notes/save', [NoteController::class, 'saveNotes'])->name('notes.save');
+
+    Route::get('/{slug}/bulletin', [BulletinController::class, 'index'])->name('bulletin');
+    Route::get('/{slug}/bulletin/data', [BulletinController::class, 'getBulletin'])->name('bulletin.data');
+
+    Route::get('/{slug}/fiche-notes', [FicheNoteController::class, 'index'])->name('fiche-notes');
+    Route::get('/{slug}/fiche-notes/data', [FicheNoteController::class, 'getFiche'])->name('fiche-notes.data');
 });
 
 

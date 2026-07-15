@@ -193,10 +193,11 @@
                                                     <th>Mois</th>
                                                     <th>Montant</th>
                                                     <th>N° Reçu</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="historiquePaiementsBody">
-                                                <tr><td colspan="6" class="text-center">Aucun paiement</td></tr>
+                                                <tr><td colspan="7" class="text-center">Aucun paiement</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -365,6 +366,19 @@ function appliquerRestrictionsModes() {
     }
 
     // ======================================================
+    // REGLE 1bis : paiement inscription/réinscription déjà effectué
+    // (indépendant des exonérations) → l'un payé grise l'autre, et lui-même
+    // ======================================================
+    if (statutPaiementActuel.inscription_payee) {
+        griser('typeInscription', 'Inscription déjà payée pour cette année scolaire');
+        griser('typeReinscription', 'Inscription déjà payée : réinscription indisponible');
+    }
+    if (statutPaiementActuel.reinscription_payee) {
+        griser('typeReinscription', 'Réinscription déjà payée pour cette année scolaire');
+        griser('typeInscription', 'Réinscription déjà payée : inscription indisponible');
+    }
+
+    // ======================================================
     // REGLE 2 : exonération mensuelle (peu importe le mois) → griser 1ère, 2ème, 3ème, annuelle
     // ======================================================
     if (exoMensuelle) {
@@ -422,24 +436,15 @@ function appliquerRestrictionsModes() {
         });
     }
 
-    // Tranche payée → griser mensuelle + autres tranches non commencées
+    // Tranche payée → griser mensuelle + annuelle UNIQUEMENT.
+    // Les autres tranches (1ère/2ème/3ème) doivent RESTER disponibles : elles font
+    // toutes partie du même mode "paiement par tranche" et peuvent être payées
+    // indépendamment les unes des autres (dans n'importe quel ordre).
     if (aTranchePaye) {
-        let mensuelleEl = document.getElementById('modeMensuelle');
-        if (mensuelleEl && !mensuelleEl.disabled) {
-            griser('modeMensuelle', 'Désactivé : un paiement par tranche a déjà été effectué');
-        }
-
-        let mapTranches = {
-            '1er_tranche' : 'modeTranche1',
-            '2eme_tranche': 'modeTranche2',
-            '3eme_tranche': 'modeTranche3',
-            'annuelle'    : 'modeAnnuelle',
-        };
-        Object.entries(mapTranches).forEach(([valeur, id]) => {
+        ['modeMensuelle', 'modeAnnuelle'].forEach(id => {
             let el = document.getElementById(id);
-            if (!el || el.disabled) return;
-            if (!tranchesAvecPaiement.includes(valeur)) {
-                griser(id, 'Désactivé : une autre tranche est déjà en cours');
+            if (el && !el.disabled) {
+                griser(id, 'Désactivé : un paiement par tranche a déjà été effectué');
             }
         });
     }
@@ -551,35 +556,13 @@ document.getElementById('btnPayerInscription').addEventListener('click', functio
             }, () => {
                 document.getElementById('blocInscription').style.display = 'none';
                 document.querySelectorAll('input[name="type_inscription"]').forEach(r => r.checked = false);
-                // NE PAS appeler chargerStatutPaiement ici pour ne pas affecter le cadre 2
+                // Recharger le statut complet pour que la REGLE 1bis grise bien l'autre bouton
+                chargerStatutPaiement();
                 chargerHistorique();
-                // Mettre à jour uniquement le statut inscription sans toucher aux restrictions
-                chargerStatutInscriptionSeulement();
             });
         }
     });
 });
-
-// Recharger uniquement le statut inscription/réinscription sans appliquer les restrictions modes
-function chargerStatutInscriptionSeulement() {
-    let eleveId       = document.getElementById('i_eleveId').value;
-    let classeId      = document.getElementById('classSelection').value;
-    let anneeScolaire = document.getElementById('anneescolaireSelect').value;
-    if (!eleveId || !classeId) return;
-    fetch('/' + slug + '/get-statut-paiement/' + eleveId + '?classe_id=' + classeId + '&annee_scolaire=' + anneeScolaire)
-        .then(res => res.json())
-        .then(data => {
-            // Mettre à jour uniquement les infos inscription/réinscription
-            if (statutPaiementActuel) {
-                statutPaiementActuel.inscription_payee   = data.inscription_payee;
-                statutPaiementActuel.reinscription_payee = data.reinscription_payee;
-            } else {
-                statutPaiementActuel = data;
-            }
-            // NE PAS appeler appliquerRestrictionsModes ici
-        })
-        .catch(err => console.error(err));
-}
 
 // ===================== CADRE 2 : TRANCHES / MENSUELLE =====================
 document.querySelectorAll('input[name="mode_paiement"]').forEach(radio => {
@@ -632,20 +615,6 @@ function calculerMontantMensuel() {
             let prix       = parseFloat(data.montant) || 0;
             let moisCoches = document.querySelectorAll('.mois-checkbox:checked:not(:disabled)').length;
             document.getElementById('montantTranche').value = (prix * moisCoches).toFixed(2);
-        });
-}
-
-function chargerResteAPayerTranche(mode) {
-    let classeId      = document.getElementById('classSelection').value;
-    let anneeScolaire = document.getElementById('anneescolaireSelect').value;
-    fetch('/' + slug + '/get-montant-tranche?classe_id=' + classeId + '&type_inscription=' + mode + '&mode_paiement=' + mode + '&annee_scolaire=' + anneeScolaire)
-        .then(res => res.json())
-        .then(data => {
-            let total    = parseFloat(data.montant) || 0;
-            let dejaPaye = parseFloat(statutPaiementActuel?.total_par_tranche?.[mode]) || 0;
-            let reste    = total - dejaPaye;
-            document.getElementById('resteAPayer').value         = reste.toFixed(2);
-            document.getElementById('resteAPayer').dataset.reste = reste;
         });
 }
 
@@ -731,7 +700,7 @@ function envoyerPaiement(data, onSuccess) {
         .catch(err => { Swal.close(); console.error(err); afficherToast('Erreur réseau.', 'error'); });
 }
 
-// ===================== HISTORIQUE =====================
+// ===================== HISTORIQUE (groupé par numéro de reçu) =====================
 function chargerHistorique() {
     let eleveId = document.getElementById('i_eleveId').value;
     if (!eleveId) return;
@@ -739,12 +708,54 @@ function chargerHistorique() {
         .then(res => res.json())
         .then(data => {
             let tbody = document.getElementById('historiquePaiementsBody');
-            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Aucun paiement</td></tr>'; return; }
-            tbody.innerHTML = data.map(p =>
-                '<tr><td>' + p.date + '</td><td>' + p.type + '</td><td>' + p.mode + '</td><td>' + p.mois + '</td><td>' + parseFloat(p.montant).toFixed(2) + '</td><td>' + p.numero_recu + '</td></tr>'
-            ).join('');
+            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun paiement</td></tr>'; return; }
+            tbody.innerHTML = data.map(p => {
+                let detailsEncoded = encodeURIComponent(JSON.stringify(p.details || []));
+                return '<tr>' +
+                    '<td>' + p.date + '</td>' +
+                    '<td>' + p.type + '</td>' +
+                    '<td>' + p.mode + '</td>' +
+                    '<td>' + p.mois + '</td>' +
+                    '<td>' + parseFloat(p.montant).toFixed(2) + '</td>' +
+                    '<td>' + p.numero_recu + '</td>' +
+                    '<td class="text-center text-nowrap">' +
+                        '<button type="button" class="btn btn-sm btn-outline-primary me-4" ' +
+                            'onclick="voirDetailPaiement(\'' + detailsEncoded + '\', \'' + p.numero_recu + '\')">' +
+                            '<i class="ri-eye-line"></i> Détail</button>' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary" ' +
+                            'onclick="imprimerRecu(\'' + p.numero_recu + '\')">' +
+                            '<i class="ri-printer-line"></i> Imprimer</button>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
         })
         .catch(err => console.error(err));
+}
+
+// Affiche le détail des lignes qui composent un même reçu (ex : plusieurs mois payés d'un coup)
+function voirDetailPaiement(detailsEncoded, numeroRecu) {
+    let details = [];
+    try { details = JSON.parse(decodeURIComponent(detailsEncoded)); } catch (e) { details = []; }
+
+    let rows = details.length
+        ? details.map(d =>
+            '<tr><td>' + (d.mois || '-') + '</td><td>' + d.mode + '</td><td>' + parseFloat(d.montant).toFixed(2) + '</td></tr>'
+          ).join('')
+        : '<tr><td colspan="3" class="text-center">Aucun détail</td></tr>';
+
+    Swal.fire({
+        title: 'Détail du reçu ' + numeroRecu,
+        html: '<div class="table-responsive"><table class="table table-sm table-bordered">' +
+              '<thead><tr><th>Mois</th><th>Mode</th><th>Montant</th></tr></thead>' +
+              '<tbody>' + rows + '</tbody></table></div>',
+        width: 500,
+        confirmButtonText: 'Fermer',
+    });
+}
+
+// Ouvre la page d'impression du reçu (route à définir côté backend)
+function imprimerRecu(numeroRecu) {
+    window.open('/' + slug + '/imprimer-recu/' + numeroRecu, '_blank');
 }
 
 // ===================== RESET GLOBAL (une seule déclaration) =====================
@@ -787,7 +798,7 @@ function resetTout() {
     document.getElementById('moisCheckboxContainer').innerHTML      = '';
 
     // Historique
-    document.getElementById('historiquePaiementsBody').innerHTML    = '<tr><td colspan="6" class="text-center">Aucun paiement</td></tr>';
+    document.getElementById('historiquePaiementsBody').innerHTML    = '<tr><td colspan="7" class="text-center">Aucun paiement</td></tr>';
 }
 
 function afficherBadgesExonerations() {

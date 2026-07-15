@@ -4,74 +4,189 @@ namespace App\Http\Controllers\ecole;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Helpers\PermissionHelper;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class MatiereController extends Controller
 {
     public function matiere($slug)
     {
-        return view('ecoles.matiere.matiere', compact('slug'));
+        abort_unless(PermissionHelper::hasRoute('matiere'), 403);
+        return view('ecoles.matieres.index', compact('slug'));
     }
 
-    public function store(Request $request, $slug)
+    private function getEcoleId($slug)
     {
-        // Validation
-        $validator = Validator::make($request->all(), [
-            'v_code'             => 'nullable|string|max:50',
-            'v_libelle'          => 'required|string|max:150',
-            'i_coefficient'      => 'required|integer|min:1',
-            'v_couleur'          => 'nullable|string|max:20',
-            't_details_matiere'  => 'nullable|string',
-        ]);
+        $ecole = DB::table('tbecole')->where('v_slugecole', $slug)->first();
+        abort_if(!$ecole, 404, 'École introuvable pour ce slug : ' . $slug);
+        return $ecole->i_idecole;
+    }
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'validation',
-                'errors' => $validator->errors()
-            ]);
+    // Liste des matières (AJAX, avec filtres)
+    public function getMatieres(Request $request, $slug)
+    {
+        $ecoleId = $this->getEcoleId($slug);
+
+        $query = DB::table('tblmatiere')
+            ->where('ecole_id', $ecoleId);
+
+        if ($request->filled('statut')) {
+            $query->where('statut', $request->statut);
+        }
+        if ($request->filled('recherche')) {
+            $r = $request->recherche;
+            $query->where(function ($q) use ($r) {
+                $q->where('nom', 'like', "%{$r}%")
+                  ->orWhere('code', 'like', "%{$r}%");
+            });
         }
 
-        try {
-            // Récupération de l'école et de l'utilisateur connecté
-            $i_ecole_id = session('ecole_id');   // à adapter selon ta gestion de session
-            $i_user_id  = auth()->id();
+        $matieres = $query->orderBy('nom')->get();
 
-            // Vérifier si le libellé existe déjà pour cette école
-            $exists = DB::table('tbmatiere')
-                ->where('v_libelle', $request->v_libelle)
-                ->where('i_ecole_id', $i_ecole_id)
+        return response()->json(['success' => true, 'data' => $matieres]);
+    }
+
+    // Détail d'une matière
+    public function detail($slug, $id)
+    {
+        $ecoleId = $this->getEcoleId($slug);
+
+        $matiere = DB::table('tblmatiere')
+            ->where('id', $id)
+            ->where('ecole_id', $ecoleId)
+            ->first();
+
+        if (!$matiere) {
+            return response()->json(['success' => false, 'message' => 'Matière introuvable.'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $matiere]);
+    }
+
+    // Créer une matière
+    public function store(Request $request, $slug)
+    {
+        $ecoleId = $this->getEcoleId($slug);
+
+        $request->validate([
+            'nom'         => 'required|string|max:150',
+            'code'        => 'nullable|string|max:30',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($request->filled('code')) {
+            $existe = DB::table('tblmatiere')
+                ->where('ecole_id', $ecoleId)
+                ->where('code', $request->code)
                 ->exists();
 
-            if ($exists) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Cette matière existe déjà.'
-                ]);
+            if ($existe) {
+                return response()->json(['success' => false, 'message' => 'Ce code de matière est déjà utilisé.'], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $now = Carbon::now();
+
+            $id = DB::table('tblmatiere')->insertGetId([
+                'ecole_id'    => $ecoleId,
+                'code'        => $request->code,
+                'nom'         => $request->nom,
+                'description' => $request->description,
+                'statut'      => 'active',
+                'created_by'  => Auth::id(),
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ]);
+
+            $matiere = DB::table('tblmatiere')->where('id', $id)->first();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Matière ajoutée avec succès', 'data' => $matiere]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Modifier une matière
+    public function update(Request $request, $slug, $id)
+    {
+        $ecoleId = $this->getEcoleId($slug);
+
+        $matiere = DB::table('tblmatiere')->where('id', $id)->where('ecole_id', $ecoleId)->first();
+        if (!$matiere) {
+            return response()->json(['success' => false, 'message' => 'Matière introuvable.'], 404);
+        }
+
+        $request->validate([
+            'nom'         => 'required|string|max:150',
+            'code'        => 'nullable|string|max:30',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($request->filled('code')) {
+            $existe = DB::table('tblmatiere')
+                ->where('ecole_id', $ecoleId)
+                ->where('code', $request->code)
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($existe) {
+                return response()->json(['success' => false, 'message' => 'Ce code de matière est déjà utilisé.'], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            DB::table('tblmatiere')->where('id', $id)->update([
+                'code'        => $request->code,
+                'nom'         => $request->nom,
+                'description' => $request->description,
+                'updated_at'  => Carbon::now(),
+            ]);
+
+            $matiereMaj = DB::table('tblmatiere')->where('id', $id)->first();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Matière modifiée avec succès', 'data' => $matiereMaj]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Suspendre / réactiver une matière
+    public function suspendre(Request $request, $slug, $id)
+    {
+        $request->validate(['motif' => 'nullable|string|max:255']);
+
+        try {
+            $matiere = DB::table('tblmatiere')->where('id', $id)->first();
+            if (!$matiere) {
+                return response()->json(['success' => false, 'message' => 'Matière introuvable.'], 404);
             }
 
-            DB::table('tbmatiere')->insert([
-                'v_code'            => $request->v_code,
-                'v_libelle'         => $request->v_libelle,
-                'i_coefficient'     => $request->i_coefficient,
-                'v_couleur'         => $request->v_couleur,
-                'i_ecole_id'        => $i_ecole_id,
-                'd_datecreation'    => now(),
-                'i_user_id'         => $i_user_id,
-                'b_desabled'        => 1,
-                't_details_matiere' => $request->t_details_matiere,
+            $nouveauStatut = $matiere->statut === 'active' ? 'suspendue' : 'active';
+
+            DB::table('tblmatiere')->where('id', $id)->update([
+                'statut'           => $nouveauStatut,
+                'motif_suspension' => $nouveauStatut === 'suspendue' ? $request->motif : null,
+                'updated_at'       => Carbon::now(),
             ]);
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Matière enregistrée avec succès.'
-            ]);
+            $matiereMaj = DB::table('tblmatiere')->where('id', $id)->first();
 
-        } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Erreur : ' . $e->getMessage()
+                'success' => true,
+                'message' => $nouveauStatut === 'suspendue' ? 'Matière suspendue' : 'Matière réactivée',
+                'data'    => $matiereMaj
             ]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }
 }
