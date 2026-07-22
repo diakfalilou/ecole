@@ -1,0 +1,40 @@
+[1mdiff --git a/app/Http/Controllers/admin/AddEtablissementController.php b/app/Http/Controllers/admin/AddEtablissementController.php[m
+[1mindex 35fe505..8dc2dc9 100644[m
+[1m--- a/app/Http/Controllers/admin/AddEtablissementController.php[m
+[1m+++ b/app/Http/Controllers/admin/AddEtablissementController.php[m
+[36m@@ -1,6 +1,6 @@[m
+ <?php[m
+ [m
+[31m-namespace App\Http\Controllers\Admin;[m
+[32m+[m[32mnamespace App\Http\Controllers\admin;[m
+ [m
+ use App\Http\Controllers\Controller;[m
+ use Illuminate\Http\Request;[m
+[1mdiff --git a/routes/web.php b/routes/web.php[m
+[1mindex 4b69841..7c2e9b5 100644[m
+[1m--- a/routes/web.php[m
+[1m+++ b/routes/web.php[m
+[36m@@ -11,11 +11,11 @@[m
+ use App\Http\Controllers\admin\AddEcoleController;[m
+ use App\Http\Controllers\admin\IndexContratController;[m
+ use App\Http\Controllers\admin\AddContratController;[m
+[31m-use App\Http\Controllers\Admin\AddMenuController;[m
+[31m-use App\Http\Controllers\Admin\IndexMenuController;[m
+[31m-use App\Http\Controllers\Admin\IndexUsersController;[m
+[31m-use App\Http\Controllers\Admin\AddUsersController;[m
+[31m-use App\Http\Controllers\Admin\UserMenuController;[m
+[32m+[m[32muse App\Http\Controllers\admin\AddMenuController;[m
+[32m+[m[32muse App\Http\Controllers\admin\IndexMenuController;[m
+[32m+[m[32muse App\Http\Controllers\admin\IndexUsersController;[m
+[32m+[m[32muse App\Http\Controllers\admin\AddUsersController;[m
+[32m+[m[32muse App\Http\Controllers\admin\UserMenuController;[m
+ use App\Http\Controllers\ecole\EcoleController;[m
+ use App\Http\Controllers\ecole\EcoleDashboardController;[m
+ use App\Http\Controllers\ecole\ProfilUserController;[m
+[36m@@ -289,4 +289,4 @@[m
+     Route::get('/{slug}/resultat', [ResultatController::class, 'index'])->name('resultat');[m
+     Route::get('{slug}/resultats/data', [ResultatController::class, 'getData'])->name('resultats.data');[m
+ [m
+[31m-});[m
+\ No newline at end of file[m
+[32m+[m[32m});[m
