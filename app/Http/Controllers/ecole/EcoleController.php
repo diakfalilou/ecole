@@ -16,7 +16,6 @@ class EcoleController extends Controller
         $ecole = DB::table('tbecole')
             ->where('v_slugecole', $slug)
             ->firstOrFail();
-
         return view('ecoles.auth.login', compact('ecole'));
     }
 
@@ -111,6 +110,6 @@ class EcoleController extends Controller
         }
 
         // fallback si session perdue
-        return redirect('/');
+        return redirect('ecole.login');
     }
 }

@@ -52,9 +52,9 @@ use App\Http\Controllers\ecole\NoteController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ecole\FicheNoteController;
 use App\Http\Controllers\ecole\ResultatController;
-
-
-
+use App\Http\Controllers\ecole\ChargerListeEleveController;
+use App\Http\Controllers\ecole\ChargerNoteController;
+use App\Http\Controllers\ecole\EmploiTempsClasseController;
 
 
 Route::get('/', [AuthController::class, 'login'])->name('login');
@@ -289,4 +289,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/{slug}/resultat', [ResultatController::class, 'index'])->name('resultat');
     Route::get('{slug}/resultats/data', [ResultatController::class, 'getData'])->name('resultats.data');
 
+
+
+    Route::get('{slug}/charger.liste.eleve', [ChargerListeEleveController::class, 'charger_liste_eleve'])->name('charger.liste.eleve');
+
+    Route::get('{slug}/charger.note', [ChargerNoteController::class, 'charger_note'])->name('charger.note');
+
+    Route::get('{slug}/charger.liste.eleve', [ChargerListeEleveController::class, 'charger_liste_eleve'])->name('charger.liste.eleve');
+    Route::get('{slug}/charger.liste.eleve/classes/{niveauId}', [ChargerListeEleveController::class, 'getClassesByNiveau'])->name('charger.liste.eleve.classes');
+    Route::get('{slug}/charger.liste.eleve/sections/{niveauId}', [ChargerListeEleveController::class, 'getSectionsByNiveau'])->name('charger.liste.eleve.sections');
+    Route::post('{slug}/charger.liste.eleve/preview', [ChargerListeEleveController::class, 'previewExcel'])->name('charger.liste.eleve.preview');
+    Route::post('{slug}/charger.liste.eleve/save', [ChargerListeEleveController::class, 'saveInscriptions'])->name('charger.liste.eleve.save');
+
+
+
+    Route::get('{slug}/emploi-du-temps', [EmploiTempsClasseController::class, 'index'])->name('emploi-du-temps');
+    Route::get('{slug}/emploi-du-temps/classes/{niveauId}', [EmploiTempsClasseController::class, 'getClassesByNiveau']);
+    Route::get('{slug}/emploi-du-temps/matieres', [EmploiTempsClasseController::class, 'getMatieresPourClasse']);
+    Route::get('{slug}/emploi-du-temps/professeurs', [EmploiTempsClasseController::class, 'getProfesseurs']);
+    Route::get('{slug}/emploi-du-temps/creneaux', [EmploiTempsClasseController::class, 'getEmploiDuTemps']);
+    Route::post('{slug}/emploi-du-temps/save', [EmploiTempsClasseController::class, 'saveCreneau']);
+    Route::delete('{slug}/emploi-du-temps/{id}', [EmploiTempsClasseController::class, 'deleteCreneau']);
 });

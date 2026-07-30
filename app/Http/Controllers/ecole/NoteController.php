@@ -27,11 +27,11 @@ class NoteController extends Controller
 
         $ecole = $this->getEcole($slug);
 
-        $data_anneescolaire = DB::table('tblanneesclaire')
-            ->orderBy('i_idanneesclaire', 'desc')
+        $data_anneescolaire = DB::table('tblcontrat')
+            ->orderBy('i_contrat_id', 'desc')
             ->get();
 
-        $annee_courante = $data_anneescolaire->first()->v_annesclaire ?? null;
+        $annee_courante = $data_anneescolaire->first()->v_annee_scolaire ?? null;
 
         $niveaux = DB::table('tblniveau')
             ->where('i_ecole_id', $ecole->i_idecole)

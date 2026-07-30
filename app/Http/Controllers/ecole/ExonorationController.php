@@ -14,10 +14,16 @@ class ExonorationController extends Controller
     {
 
         abort_unless(PermissionHelper::hasRoute('exoneration'), 403);
-        $ecole              = DB::table('tbecole')->where('v_slugecole', $slug)->first();
-        $data_anneescolaire = DB::table('tblanneesclaire')->orderBy('i_idanneesclaire', 'desc')->get();
-        $annee_courante     = $data_anneescolaire->first()->v_annesclaire ?? null;
-        $niveaux            = DB::table('tblniveau')
+        $ecole = DB::table('tbecole')->where('v_slugecole', $slug)->first();
+
+        $data_anneescolaire = DB::table('tblcontrat')
+            ->where('i_ecole_id',$ecole->i_idecole)
+            ->orderBy('i_contrat_id', 'desc')
+        ->get();
+
+        $annee_courante = $data_anneescolaire->first()->v_annee_scolaire ?? null;
+
+        $niveaux = DB::table('tblniveau')
                                 ->where('i_ecole_id', $ecole->i_idecole)
                                 ->orderBy('i_niveauID', 'desc')
                                 ->get();
