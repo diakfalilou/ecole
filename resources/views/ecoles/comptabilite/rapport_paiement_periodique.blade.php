@@ -31,8 +31,8 @@
                     <label class="form-label text-sm fw-semibold">Année scolaire</label>
                     <select name="annee_scolaire" class="form-select">
                         @foreach ($data_anneescolaire as $a)
-                            <option value="{{ $a->v_annesclaire }}" {{ $annee == $a->v_annesclaire ? 'selected' : '' }}>
-                                {{ $a->v_annesclaire }}
+                            <option value="{{ $a->v_annee_scolaire }}" {{ $annee == $a->v_annee_scolaire ? 'selected' : '' }}>
+                                {{ $a->v_annee_scolaire }}
                             </option>
                         @endforeach
                     </select>

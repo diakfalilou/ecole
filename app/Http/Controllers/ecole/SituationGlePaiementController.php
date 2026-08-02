@@ -16,8 +16,12 @@ class SituationGlePaiementController extends Controller
         $ecole = DB::table('tbecole')->where('v_slugecole', $slug)->first();
         abort_unless($ecole, 404);
 
-        $data_anneescolaire = DB::table('tblanneesclaire')->orderBy('i_idanneesclaire', 'desc')->get();
-        $annee_courante     = $data_anneescolaire->first()->v_annesclaire ?? null;
+        $data_anneescolaire = DB::table('tblcontrat')
+            ->where('i_ecole_id',$ecole->i_idecole)
+            ->orderBy('i_contrat_id', 'desc')
+        ->get();
+        $annee_courante = $data_anneescolaire->first()->v_annee_scolaire ?? null;
+
         $annee              = $request->annee_scolaire ?? $annee_courante;
 
         $niveau_id = $request->niveau_id;

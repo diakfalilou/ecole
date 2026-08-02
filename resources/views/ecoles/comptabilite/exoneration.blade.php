@@ -29,8 +29,8 @@
                             <label class="text-sm fw-semibold text-primary-light d-inline-block mb-8">Année scolaire <span class="text-danger-600">*</span></label>
                             <select id="anneescolaireSelect" class="form-control form-select">
                                 @foreach ($data_anneescolaire as $annee)
-                                    <option value="{{ $annee->v_annesclaire }}" {{ $annee->v_annesclaire == $annee_courante ? 'selected' : '' }}>
-                                        {{ $annee->v_annesclaire }}
+                                    <option value="{{ $annee->v_annee_scolaire }}" {{ $annee->v_annee_scolaire == $annee_courante ? 'selected' : '' }}>
+                                        {{ $annee->v_annee_scolaire }}
                                     </option>
                                 @endforeach
                             </select>

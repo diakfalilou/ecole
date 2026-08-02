@@ -41,15 +41,17 @@ class BulletinController extends Controller
      */
     public function index($slug)
     {
+
         abort_unless(PermissionHelper::hasRoute('bulletin'), 403);
 
         $ecole = $this->getEcole($slug);
 
-        $data_anneescolaire = DB::table('tblanneesclaire')
-            ->orderBy('i_idanneesclaire', 'desc')
+        $data_anneescolaire = DB::table('tblcontrat')
+            ->where('i_ecole_id',$ecole->i_idecole)
+            ->orderBy('i_contrat_id', 'desc')
             ->get();
 
-        $annee_courante = $data_anneescolaire->first()->v_annesclaire ?? null;
+        $annee_courante = $data_anneescolaire->first()->v_annee_scolaire ?? null;
 
         $niveaux = DB::table('tblniveau')
             ->where('i_ecole_id', $ecole->i_idecole)
@@ -320,7 +322,7 @@ class BulletinController extends Controller
             ->where('i.b_active', 1)
             ->where('e.b_desabled', 1)
             ->select('e.i_eleve_id as id')
-            ->get();
+        ->get();
 
         $moyennesClasse = [];
 

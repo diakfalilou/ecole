@@ -29,6 +29,18 @@
     <div class="card mb-24">
         <div class="card-body">
             <div class="row g-3 align-items-end">
+                <div class="col-xxl-3 col-xl-4 col-sm-6">
+                    <label class="text-sm fw-semibold text-primary-light d-inline-block mb-8">
+                        Année scolaire <span class="text-danger-600">*</span>
+                    </label>
+                    <select id="anneescolaireSelect" class="form-control form-select">
+                        @foreach ($data_anneescolaire as $annee)
+                            <option value="{{ $annee->v_annee_scolaire }}" {{ $annee->v_annee_scolaire == $annee_courante ? 'selected' : '' }}>
+                                {{ $annee->v_annee_scolaire }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label mb-1">Choisir une classe *</label>
                     <select class="form-control" id="selectClasse"></select>
@@ -126,9 +138,14 @@
     document.getElementById('btnChargerMatieres').addEventListener('click', async function () {
         const select = document.getElementById('selectClasse');
         const classeId = select.value;
+        const anneeScolaire = document.getElementById('anneescolaireSelect').value;
 
         if (!classeId) {
             toast('Veuillez sélectionner une classe.', 'error');
+            return;
+        }
+        if (!anneeScolaire) {
+            toast('Veuillez sélectionner une année scolaire.', 'error');
             return;
         }
 
@@ -136,7 +153,7 @@
 
         loader(true, 'Chargement des matières...');
         try {
-            const data = await apiFetch(`${baseUrl}/matieres?classe_id=${classeId}`);
+            const data = await apiFetch(`${baseUrl}/matieres?classe_id=${classeId}&annee_scolaire=${encodeURIComponent(anneeScolaire)}`);
             matieresCache = data.data;
             loader(false);
 
@@ -224,7 +241,15 @@
     });
 
     // ---------- Enregistrer les affectations ----------
+    // ---------- Enregistrer les affectations ----------
     document.getElementById('btnEnregistrerAffectation').addEventListener('click', async function () {
+        const anneeScolaire = document.getElementById('anneescolaireSelect').value;
+
+        if (!anneeScolaire) {
+            toast('Veuillez sélectionner une année scolaire.', 'error');
+            return;
+        }
+
         const lignes = document.querySelectorAll('#listeMatieres .matiere-ligne');
         const affectations = [];
 
@@ -242,7 +267,7 @@
         if (!affectations.length) {
             const confirmVide = await Swal.fire({
                 title: 'Aucune matière cochée',
-                text: 'Cela retirera toutes les matières actuellement affectées à cette classe. Continuer ?',
+                text: 'Cela retirera toutes les matières actuellement affectées à cette classe pour cette année scolaire. Continuer ?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Oui, tout retirer',
@@ -252,7 +277,7 @@
         } else {
             const confirm = await Swal.fire({
                 title: 'Confirmer l\'affectation ?',
-                html: `<b>${affectations.length}</b> matière(s) seront affectées à cette classe avec leurs coefficients.`,
+                html: `<b>${affectations.length}</b> matière(s) seront affectées à cette classe pour l'année <b>${anneeScolaire}</b>.`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Oui, enregistrer',
@@ -268,6 +293,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     classe_id: classeSelectionnee,
+                    annee_scolaire: anneeScolaire,
                     affectations: affectations
                 })
             });
@@ -276,6 +302,12 @@
         } catch (e) {
             loader(false);
             toast(e.message, 'error');
+        }
+    });
+
+    document.getElementById('anneescolaireSelect').addEventListener('change', function () {
+        if (classeSelectionnee) {
+            document.getElementById('btnChargerMatieres').click();
         }
     });
 
