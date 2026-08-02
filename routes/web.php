@@ -294,6 +294,11 @@ Route::middleware('auth')->group(function () {
     Route::get('{slug}/charger.liste.eleve', [ChargerListeEleveController::class, 'charger_liste_eleve'])->name('charger.liste.eleve');
 
     Route::get('{slug}/charger.note', [ChargerNoteController::class, 'charger_note'])->name('charger.note');
+    Route::get('{slug}/charger.note', [ChargerNoteController::class, 'charger_note'])->name('charger.note');
+    Route::get('{slug}/notes/classes/{niveauId}', [ChargerNoteController::class, 'classes_par_niveau'])->name('notes.classes.par.niveau');
+    Route::get('{slug}/notes/matieres/{classeId}', [ChargerNoteController::class, 'matieres_par_classe'])->name('notes.matieres.par.classe');
+    Route::post('{slug}/notes/import', [ChargerNoteController::class, 'importFichier'])->name('notes.import');
+    Route::post('{slug}/notes/enregistrer', [ChargerNoteController::class, 'enregistrerNotes'])->name('notes.enregistrer');
 
     Route::get('{slug}/charger.liste.eleve', [ChargerListeEleveController::class, 'charger_liste_eleve'])->name('charger.liste.eleve');
     Route::get('{slug}/charger.liste.eleve/classes/{niveauId}', [ChargerListeEleveController::class, 'getClassesByNiveau'])->name('charger.liste.eleve.classes');
