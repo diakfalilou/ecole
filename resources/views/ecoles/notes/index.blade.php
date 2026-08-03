@@ -373,19 +373,17 @@
 
         html += `</tbody></table></div>
                   <p class="notes-grid-hint no-print">Les notes sont enregistrées automatiquement dès que vous quittez une case (perte de focus).</p>
-                  <div id="summaryContainer" class="mt-24"></div>
                   <div id="bulletinContainer" class="mt-24"></div>`;
 
         document.getElementById('notesTableContainer').innerHTML = html;
 
         let gridWrapper = document.querySelector('.notes-grid-wrapper');
 
-        // Met à jour notesState en direct à chaque frappe, et rafraîchit le récapitulatif
+        // Met à jour notesState en direct à chaque frappe
         gridWrapper.addEventListener('input', function (e) {
             if (!e.target.classList.contains('note-input')) return;
             let { eleve, matiere, type, mois: moisAttr } = e.target.dataset;
             notesState[noteKey(eleve, matiere, type, moisAttr)] = parseFloat(e.target.value) || 0;
-            renderSummaryTable();
         });
 
         // Sauvegarde auto à la perte de focus (délégation sur le tableau)
@@ -408,21 +406,17 @@
                 inp.value = first.value;
                 notesState[noteKey(eleveId, matiereId, 'cours', inp.dataset.mois)] = parseFloat(first.value) || 0;
             });
-            renderSummaryTable();
             saveNotes(Array.from(inputs), Array.from(inputs));
         });
 
         document.getElementById('btnBulletinAnnuel').addEventListener('click', loadBulletinAnnuel);
         document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
         document.getElementById('btnPrintPdf').addEventListener('click', () => window.print());
-
-        renderSummaryTable();
     }
 
-    // ===================== TABLEAU RÉCAPITULATIF =====================
+    // ===================== MOYENNE MATIERE (utilisée par l'export Excel) =====================
     // Hypothèse de calcul (modifiable si besoin) :
     //   Moyenne matière = (moyenne des notes de cours de la période + note de compo) / 2
-    //   Moyenne générale = moyenne des matières pondérée par leur coefficient
     function computeMoyenneMatiere(eleveId, matiereId) {
         let sum = 0;
         currentMois.forEach(mo => { sum += notesState[noteKey(eleveId, matiereId, 'cours', mo)] || 0; });
@@ -431,35 +425,6 @@
         let noteCompo = notesState[noteKey(eleveId, matiereId, 'compo', null)] || 0;
 
         return (moyenneCours + noteCompo) / 2;
-    }
-
-    function renderSummaryTable() {
-        if (!currentEleves.length || !currentMatieres.length) return;
-
-        let html = `<div class="grid-toolbar no-print"><span class="grid-toolbar-info">Tableau récapitulatif des moyennes</span></div>
-                     <div class="notes-grid-wrapper"><table class="notes-grid recap-grid"><thead><tr>
-                        <th class="col-eleve sticky-col">Élève</th>`;
-        currentMatieres.forEach(m => { html += `<th>${m.nom}</th>`; });
-        html += `<th class="col-general">Moyenne générale</th></tr></thead><tbody>`;
-
-        let totalCoef = currentMatieres.reduce((s, m) => s + (parseFloat(m.coefficient) || 1), 0);
-
-        currentEleves.forEach((el, idx) => {
-            html += `<tr class="${idx % 2 === 0 ? 'row-even' : 'row-odd'}"><td class="col-eleve sticky-col">${el.nom} ${el.prenom}</td>`;
-            let sumPonderee = 0;
-            currentMatieres.forEach(m => {
-                let moyenne = computeMoyenneMatiere(el.id, m.id);
-                let coef = parseFloat(m.coefficient) || 1;
-                sumPonderee += moyenne * coef;
-                html += `<td class="cell-recap">${moyenne.toFixed(2)}</td>`;
-            });
-            let moyenneGenerale = totalCoef ? sumPonderee / totalCoef : 0;
-            html += `<td class="cell-recap cell-general">${moyenneGenerale.toFixed(2)}</td></tr>`;
-        });
-
-        html += '</tbody></table></div>';
-
-        document.getElementById('summaryContainer').innerHTML = html;
     }
 
     // ===================== BULLETIN ANNUEL (période par période + annuelle) =====================
@@ -676,7 +641,6 @@
                 inp.classList.add('is-saved');
                 setTimeout(() => inp.classList.remove('is-saved'), 1200);
             });
-            renderSummaryTable();
         })
         .catch(() => {
             cellsToFlag.forEach(inp => {

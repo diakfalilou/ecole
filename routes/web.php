@@ -55,6 +55,9 @@ use App\Http\Controllers\ecole\ResultatController;
 use App\Http\Controllers\ecole\ChargerListeEleveController;
 use App\Http\Controllers\ecole\ChargerNoteController;
 use App\Http\Controllers\ecole\EmploiTempsClasseController;
+use App\Http\Controllers\ecole\RecapNoteController;
+use App\Http\Controllers\ecole\saisieNoteController;
+
 
 
 Route::get('/', [AuthController::class, 'login'])->name('login');
@@ -269,9 +272,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/{slug}/emploi-du-temps/toggle', [EmploiDuTempsController::class, 'toggleCase'])->name('emploidutemps.toggle');
     Route::get('/{slug}/emploi-du-temps/pdf', [EmploiDuTempsController::class, 'imprimerPdf'])->name('emploidutemps.pdf');
 
-
-
-
     Route::get('/{slug}/notes', [NoteController::class, 'index'])->name('notes');
     //
     Route::get('/{slug}/notes/classes/{niveauId}', [NoteController::class, 'getClassesByNiveau'])->name('notes.classes');
@@ -315,4 +315,16 @@ Route::middleware('auth')->group(function () {
     Route::get('{slug}/emploi-du-temps/creneaux', [EmploiTempsClasseController::class, 'getEmploiDuTemps']);
     Route::post('{slug}/emploi-du-temps/save', [EmploiTempsClasseController::class, 'saveCreneau']);
     Route::delete('{slug}/emploi-du-temps/{id}', [EmploiTempsClasseController::class, 'deleteCreneau']);
+
+    Route::get('{slug}/saisie.note', [saisieNoteController::class, 'saisie_detail_note'])->name('saisie.note');
+    Route::get('{slug}/saisie-notes/classes/{niveauId}', [saisieNoteController::class, 'classes_par_niveau'])->name('saisi.notes.classes.par.niveau');
+    Route::get('{slug}/saisie-notes/matieres/{classeId}', [saisieNoteController::class, 'matieres_par_classe'])->name('saisie.notes.matieres.par.classe');
+    Route::post('{slug}/saisie-notes/eleves', [saisieNoteController::class, 'chargerEleves'])->name('saisie.notes.eleves');
+    Route::post('{slug}/saisie-notes/enregistrer', [saisieNoteController::class, 'enregistrerNotes'])->name('saisie.notes.enregistrer');
+
+
+    Route::get('{slug}/recap.note', [RecapNoteController::class, 'recap_note'])->name('recap.note');
+    Route::get('{slug}/recap-notes/classes/{niveauId}', [RecapNoteController::class, 'classes_par_niveau'])->name('recap.notes.classes.par.niveau');
+    Route::get('{slug}/recap-notes/matieres/{classeId}', [RecapNoteController::class, 'matieres_par_classe'])->name('recap.notes.matieres.par.classe');
+    Route::post('{slug}/recap-notes/donnees', [RecapNoteController::class, 'chargerRecap'])->name('recap.notes.donnees');
 });
